@@ -7,6 +7,9 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
+# Detect the non-root user (important when running via sudo)
+REAL_USER="${SUDO_USER:-$USER}"
+
 echo "[+] Updating apt and installing dependencies..."
 apt update
 apt install -y ca-certificates curl
@@ -32,4 +35,24 @@ EOF
 echo "[+] Updating apt repositories..."
 apt update
 
-echo "[✓] Docker repository setup complete."
+echo "[+] Installing Docker Engine and plugins..."
+apt install -y \
+  docker-ce \
+  docker-ce-cli \
+  containerd.io \
+  docker-buildx-plugin \
+  docker-compose-plugin
+
+echo "[+] Enabling Docker service..."
+systemctl enable docker
+systemctl start docker
+
+echo "[+] Adding user '${REAL_USER}' to docker group..."
+usermod -aG docker "${REAL_USER}"
+
+echo
+echo "[✓] Docker installation complete."
+echo
+echo "⚠️  IMPORTANT:"
+echo "You must log out and log back in for docker group changes to take effect."
+echo "Alternatively, run: newgrp docker"
